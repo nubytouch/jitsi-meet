@@ -3,6 +3,10 @@
 import { openConnection } from './connection';
 
 import AuthHandler from './modules/UI/authentication/AuthHandler';
+import {
+    PostMessageTransportBackend,
+    Transport
+} from './modules/transport';
 import Recorder from './modules/recorder/Recorder';
 
 import mediaDeviceHelper from './modules/devices/mediaDeviceHelper';
@@ -1948,6 +1952,23 @@ export default {
             }
 
             APP.API.notifySuspendDetected();
+        });
+
+        // listens for messages about suspend from power-monitor
+        const transport = new Transport({
+            backend: new PostMessageTransportBackend({
+                postisOptions: { scope: 'jitsi-power-monitor' }
+            })
+        });
+
+        transport.on('event', event => {
+            if (event && event.name === 'power-monitor' && event.event === 'suspend') {
+                room.eventEmitter.emit(JitsiConferenceEvents.SUSPEND_DETECTED);
+
+                return true;
+            }
+
+            return false;
         });
 
         APP.UI.addListener(UIEvents.AUDIO_MUTED, muted => {
